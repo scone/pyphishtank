@@ -28,6 +28,7 @@ __license__ = 'MIT License'
 
 import datetime
 import requests
+import base64
 
 
 
@@ -66,6 +67,7 @@ class Result():
         :Parameters:
            - `response`: actual json response from the service
         """
+        
         self.url = response.get('url', None)
         self.in_database = response.get('in_database', None)
         self.phish_id = response.get('phish_id', None)
@@ -73,15 +75,15 @@ class Result():
         self.verified = response.get('verified', None)
         self.verified_at = response.get('verified_at', None)
         if self.verified_at:
-            self.verified_at = self.__force_date(self.verified_at)
+            self.verified_at = self.__format_date(self.verified_at)
         self.valid = response.get('valid', None)
         self.submitted_at = response.get('submitted_at', None)
         if self.submitted_at:
-            self.submitted_at = self.__force_date(self.submitted_at)
+            self.submitted_at = self.__format_date(self.submitted_at)
 
-    def __force_date(self, date_str):
+    def __format_date(self, date_str):
         """
-        Forces a date string into a datetime object.
+        Format a date string into a datetime object.
 
         :Parameters:
            - `date_str`: the date string in %Y-%m-%dT%H:%M:%S+00:00 format.
@@ -182,7 +184,7 @@ class PhishTank():
            - `url`: url to check with PhishTank
         """
         post_data = {
-            'url': url,
+            'url': base64.b64encode(url),
             'format': 'json',
             'app_key': self.__apikey,
         }
