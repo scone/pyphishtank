@@ -26,7 +26,8 @@ __author__ = "Samuel Cleveland"
 __version__ = '1.0.0'
 __license__ = 'MIT License'
 
-import datetime
+from datetime import datetime
+from datetime import timedelta
 import requests
 import base64
 
@@ -83,7 +84,7 @@ class Result():
         :Parameters:
            - `date_str`: the date string in %Y-%m-%dT%H:%M:%S+00:00 format.
         """
-        return datetime.datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S+00:00')
+        return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S+00:00')
 
     def __phish(self):
         """
@@ -123,6 +124,8 @@ class PhishTank():
     __apikey = ''
     _requests_available = 200
     _requests_made = 0
+    _time_to_next_request = datetime.utcnow()
+    _request_interval = 60
 
     def __init__(self, api_url='http://checkurl.phishtank.com/checkurl/', apikey=None):
         """
@@ -136,10 +139,17 @@ class PhishTank():
         
     def requests_left(self):
         """Check if there are API requests available, returns True if there are, False if not."""
+        if (self._time_to_next_request >= datetime.utcnow()):
+            return False
+            
         if (self._requests_available - self._requests_made) > 0:
             return True
         else:
             return False
+            
+    def time_to_wait(self):
+        """Update the time to wait until next request allowed."""
+        self._time_to_next_request = datetime.utcnow() + timedelta(seconds=self._request_interval)
 
     def check(self, url):
         """
@@ -148,8 +158,6 @@ class PhishTank():
         :Parameters:
            - `url`: url to check agianst the PhishTank database
         """
-        print(url)
-        print(type(url))
         post_data = {
             'url': base64.b64encode(url.encode("utf-8")),
             'format': 'json',
@@ -159,10 +167,10 @@ class PhishTank():
         response = requests.post(self._api_url, data=post_data)
         self._requests_made = int(response.headers.get('X-Request-Count', 0))
         self._requests_available = int(response.headers.get('X-Request-Limit', 50))
+        self._request_interval = int(response.headers.get("X-Request-Limit-Interval", 300)[:-8])
         
     
         if response.status_code == 509:
-            request_interval = int(response.headers.get("X-Request-Limit-Interval", 300))
             raise PhishTankAPILimitExceeded(request_interval)
                 
         data = response.json()
