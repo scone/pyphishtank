@@ -148,19 +148,21 @@ class PhishTank():
         :Parameters:
            - `url`: url to check agianst the PhishTank database
         """
+        print(url)
+        print(type(url))
         post_data = {
-            'url': base64.b64encode(url),
+            'url': base64.b64encode(url.encode("utf-8")),
             'format': 'json',
             'app_key': self.__apikey,
         }
     
         response = requests.post(self._api_url, data=post_data)
-        self._requests_made = response.headers.get('X-Request-Count', 0)
-        self._requests_available = response.headers.get('X-Request-Limit', 50)
+        self._requests_made = int(response.headers.get('X-Request-Count', 0))
+        self._requests_available = int(response.headers.get('X-Request-Limit', 50))
         
     
         if response.status_code == 509:
-            request_interval = response.headers.get("X-Request-Limit-Interval", 300)
+            request_interval = int(response.headers.get("X-Request-Limit-Interval", 300))
             raise PhishTankAPILimitExceeded(request_interval)
                 
         data = response.json()
