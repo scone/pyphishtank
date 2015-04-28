@@ -55,14 +55,9 @@ class Result():
     Result sent back from PhishTank.
     """
 
-    # Slots for memory
-    __slots__ = [
-        'url', 'in_database', 'phish_id', 'phish_detail_page',
-        'verified', 'verified_at', 'valid', 'submitted_at']
-
     def __init__(self, response):
         """
-        Creates an instance of a response.
+        Initialize Result object.
 
         :Parameters:
            - `response`: actual json response from the service
@@ -90,9 +85,9 @@ class Result():
         """
         return datetime.datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S+00:00')
 
-    def __unsafe(self):
+    def __phish(self):
         """
-        Returns back True if known to be unsafe, False otherwise.
+        Returns True if the URL checked is known to be a phish, False if not.
         """
         if self.valid:
             return True
@@ -100,9 +95,9 @@ class Result():
 
     def __repr__(self):
         """
-        Representation of thie object.
+        Representation of Result object.
         """
-        return "<Result: url=%s, unsafe=%s>" % (self.url, self.unsafe)
+        return "<Result: url=%s, phish=%s>" % (self.url, self.__phish())
 
     def __eq__(self, other):
         """
@@ -119,36 +114,6 @@ class Result():
                 return False
         return True
 
-    def report(self):
-        """
-        **DEPRECATED**
-
-        Old method which uses the internal data to return a report in
-        string format. Use .result instead..
-        """
-        import warnings
-        warnings.warn('report is deprecated. Please use result.')
-        return self.result
-
-    def __result(self):
-        """
-        Uses the internal data to return a report in string format.
-        """
-        formatted_string = ""
-        for item in self.__slots__:
-            if getattr(self, item):
-                formatted_string += "%s: %s\n" % (item, getattr(self, item))
-        formatted_string += "unsafe: %s" % self.unsafe
-        return formatted_string
-
-    # Aliases
-    __str__ = __result
-    unicode = __result
-
-    # Properties
-    unsafe = property(__unsafe)
-    result = property(__result)
-
 
 class PhishTank():
     """
@@ -156,7 +121,7 @@ class PhishTank():
     """
 
     __apikey = ''
-    _requests_available = 50
+    _requests_available = 200
     _requests_made = 0
 
     def __init__(self, api_url='http://checkurl.phishtank.com/checkurl/', apikey=None):
@@ -170,8 +135,8 @@ class PhishTank():
         self._api_url = api_url
         
     def requests_left(self):
-        """Check if API request limit has been reached."""
-        if self._requests > 0:
+        """Check if there are API requests available, returns True if there are, False if not."""
+        if (self._requests_available - self._requests_made) > 0:
             return True
         else:
             return False
@@ -181,7 +146,7 @@ class PhishTank():
         Check a URL.
 
         :Parameters:
-           - `url`: url to check with PhishTank
+           - `url`: url to check agianst the PhishTank database
         """
         post_data = {
             'url': base64.b64encode(url),
